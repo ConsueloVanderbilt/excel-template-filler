@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="通过匹配字段，将原始 Excel 的指定列填入目标模板。文件只在浏览器本地处理。">
+  <title>Excel 模板数据填充工具</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">填</span><span>Excel 模板数据填充工具</span></div>
+    <div class="privacy"><span class="status-dot"></span>仅在本机处理，不上传文件</div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">本地 Excel 工具</p>
+      <h1>找到对应记录，<br><span>把数据准确填入模板。</span></h1>
+      <p class="hero-copy">一次导入多份原始数据，在统一数据池中查找唯一记录，再把指定数据填入一个目标模板。每条写入结果都可以追溯到来源文件。</p>
+      <div class="steps" aria-label="操作步骤">
+        <span class="step active"><b>1</b>上传文件</span><i></i>
+        <span class="step"><b>2</b>设置规则</span><i></i>
+        <span class="step"><b>3</b>填充并导出</span>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="Excel 模板填充工作区">
+      <div id="globalMessage" class="message hidden" role="alert"></div>
+
+      <section class="area-block">
+        <div class="section-title"><span class="number">A</span><div><h2>上传文件</h2><p>读取第一个工作表；系统会自动估算表头行数，也可手动调整</p></div></div>
+        <div class="upload-grid">
+          <article class="upload-card source-upload-card" id="sourceCard">
+            <div class="card-heading"><span class="number">01</span><div><h3>原始数据文件</h3><p>可一次选择或拖入多个 Excel</p></div></div>
+            <label class="dropzone" id="sourceDrop" for="sourceFile">
+              <input type="file" id="sourceFile" accept=".xlsx,.xlsm,.xls" multiple hidden>
+              <span class="upload-icon">↑</span><strong>选择多个 Excel 文件</strong><small>支持 .xlsx、.xls，可继续追加</small>
+            </label>
+            <div class="source-summary hidden" id="sourceSummary"></div>
+            <div class="source-list hidden" id="sourceList" aria-live="polite"></div>
+          </article>
+
+          <article class="upload-card" id="targetCard">
+            <div class="card-heading"><span class="number">02</span><div><h3>目标模板表</h3><p>最终导出以这份工作簿为基础</p></div></div>
+            <label class="dropzone" id="targetDrop" for="targetFile">
+              <input type="file" id="targetFile" accept=".xlsx,.xlsm,.xls" hidden>
+              <span class="upload-icon">↑</span><strong>点击选择或拖入 Excel</strong><small>支持 .xlsx、.xls</small>
+            </label>
+            <div class="file-info hidden" id="targetInfo"></div>
+            <label class="header-depth hidden" id="targetDepthWrap">表头行数
+              <select id="targetHeaderDepth" aria-label="目标模板表表头行数"></select>
+            </label>
+          </article>
+        </div>
+      </section>
+
+      <section class="area-block rules-block">
+        <div class="section-title"><span class="number">B</span><div><h2>匹配规则</h2><p>使用什么字段确认是同一条记录</p></div></div>
+        <div class="rule-grid">
+          <label>原始表匹配字段<select id="sourceMatchField" disabled><option value="">请先上传文件</option></select></label>
+          <span class="rule-arrow" aria-hidden="true">=</span>
+          <label>模板表匹配字段<select id="targetMatchField" disabled><option value="">请先上传文件</option></select></label>
+        </div>
+      </section>
+
+      <section class="area-block rules-block">
+        <div class="section-title"><span class="number">C</span><div><h2>填充规则</h2><p>匹配成功后，从哪里读取数据、写到哪里</p></div></div>
+        <div class="rule-grid">
+          <label>原始数据来源字段<select id="sourceDataField" disabled><option value="">请先上传文件</option></select></label>
+          <span class="rule-arrow flow-arrow" aria-hidden="true">→</span>
+          <label>模板目标字段<select id="targetFillField" disabled><option value="">请先上传文件</option></select></label>
+        </div>
+        <p class="mapping-note">当前版本支持 1 组填充映射；内部结构已按可扩展映射设计。</p>
+      </section>
+
+      <section class="area-block execute-block">
+        <div class="section-title"><span class="number">D</span><div><h2>执行填充</h2><p>按模板每一行进行完全一致匹配</p></div></div>
+        <button class="primary wide-button" id="fillButton" disabled>开始匹配并填充</button>
+      </section>
+
+      <section id="results" class="results hidden" aria-live="polite">
+        <div class="results-head"><div><p class="eyebrow">处理结果</p><h2>填充概览</h2></div><span id="resultBadge" class="badge"></span></div>
+        <div id="resultNotice" class="result-notice hidden"></div>
+        <div class="stats stats-ten">
+          <article><span>原始文件</span><strong id="sourceFileCount">0</strong><small>个</small></article>
+          <article><span>原始数据</span><strong id="sourceRowCount">0</strong><small>行</small></article>
+          <article><span>模板待匹配</span><strong id="templateCount">0</strong><small>行</small></article>
+          <article class="success-stat"><span>成功填充</span><strong id="filledCount">0</strong><small>格</small></article>
+          <article class="success-stat"><span>单一来源</span><strong id="singleSourceCount">0</strong><small>行</small></article>
+          <article class="success-stat"><span>自动选择唯一非空</span><strong id="autoSelectedCount">0</strong><small>行</small></article>
+          <article class="success-stat"><span>多来源一致</span><strong id="consistentCount">0</strong><small>行</small></article>
+          <article class="warning-stat"><span>未匹配</span><strong id="unmatchedCount">0</strong><small>行</small></article>
+          <article class="warning-stat"><span>所有来源为空</span><strong id="sourceEmptyCount">0</strong><small>行</small></article>
+          <article class="danger-stat"><span>数据冲突</span><strong id="conflictCount">0</strong><small>行</small></article>
+        </div>
+
+        <div class="preview-head"><div><h3>结果预览</h3><p>展示模板数据行的匹配与写入结果，最多 100 行。</p></div><button class="export" id="exportButton" disabled>导出填写后的 Excel <span>↓</span></button></div>
+        <div class="table-wrap preview-wrap"><table id="previewTable"></table></div>
+        <div class="format-warning"><strong>格式保真说明</strong><span>工具直接修改目标模板工作簿中的指定单元格，并保留工作表、合并区域、列宽和行高。SheetJS 社区版无法保证所有高级格式、图表、宏、外部链接或复杂对象在重新保存后完全不变，请先用副本测试复杂模板。</span></div>
+      </section>
+    </section>
+  </main>
+
+  <footer>无需安装 · 无需登录 · 文件不离开您的电脑</footer>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
